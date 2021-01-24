@@ -25,13 +25,13 @@ private:
 class Vector3 {
 public:
 	Vector3() : x(0), y(0), z(0) { 
-		std::cout << "Vector3()" << "\n"; 
+		//std::cout << "Vector3()" << "\n"; 
 	}
 	Vector3(float scalar) : x(scalar), y(scalar), z(scalar) { 
-		std::cout << "Vector3(scalar)" << "\n"; 
+		//std::cout << "Vector3(scalar)" << "\n"; 
 	}
 	Vector3(float x, float y, float z) : x(x), y(y), z(z) { 
-		std::cout << "Vector3(x,y,z)" << "\n"; 
+		//std::cout << "Vector3(x,y,z)" << "\n"; 
 	}
 	Vector3(const Vector3& other) : x (other.x), y(other.y), z(other.z) {
 		std::cout << "Copy c`tor" << "\n";
@@ -69,14 +69,15 @@ template<typename T>
 class Vector {
 public:
 	Vector() { 
+		// capacity is important because of copying and reallocating memory for the vector 
+		// causes destroy and several c'tor calls. It can be improved with moving and placement new features
 		reAlloc(2);
 	}
 
 	~Vector() {
 		// if Vector<Vector3*> vector; is created
 		// its not the responsibility of the Vector class to free the memory you allocated 
-		// and the pointers point to
-		// so this is OK:
+		// and the pointers point to so this is OK:
 		delete[] data_;
 	}
 
@@ -85,6 +86,19 @@ public:
 			reAlloc(capacity_ + capacity_ / 2);
 		}
 		data_[size_++] = value;
+	}
+
+	void popBack() {
+		if (size_ > 0) {
+			data_[--size_].~T();
+		}
+	}
+
+	void clear() {
+		for (size_t i = 0; i < size_; i++) {
+			data_[i].~T();
+		}
+		size_ = 0;
 	}
 
 	// FIRST IMPROVEMENT R Value refs for temporaries -> move instead of copy
@@ -103,7 +117,11 @@ public:
 			reAlloc(capacity_ + capacity_ / 2);
 		}
 		// forward the arguments to the corresponding c'tors of T
-		data_[size_] = T(std::forward<Args>(args)...);  // ... unpack the arguments
+		// but that is constructing a temporary and move it to vector (see with breakpoint)
+		//old: data_[size_] = T(std::forward<Args>(args)...);  // ... unpack the arguments
+
+		// FOURTH IMPROVEMENT placement new operator: you providing the memory to 'new' where the obj should be directly constructed
+		new (&data_[size_]) T(std::forward<Args>(args)...);
 		return data_[size_++];
 	}
 
