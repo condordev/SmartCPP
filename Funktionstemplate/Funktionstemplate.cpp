@@ -4,6 +4,11 @@
 
 using namespace std;
 
+template<typename T>
+bool min(const T& a, const T& b) {
+    return (a < b) ? a : b;
+}
+
 // Unsere Standardvorlage für maxi()
 template <typename T>
 T maxi(T obj1, T obj2) {
